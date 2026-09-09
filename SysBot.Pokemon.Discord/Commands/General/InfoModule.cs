@@ -32,7 +32,7 @@ public class InfoModule : SlashModuleBase
         var builder = new EmbedBuilder
         {
             Color = Color.Blue,
-            Description = Description
+            Description = detail,
         };
 
         builder.AddField("Info",
@@ -40,7 +40,7 @@ public class InfoModule : SlashModuleBase
             $"Special thanks to notzyro, santacrab2, and 9Bitdo for their help with code, updates, and ongoing support.\n" +
             $"- [Upstream Source Code]({upstream}) by kwsch\n" +
             $"Credit to Kurt, Anubis, and Architdate for developing the original SysBot code.\n" +
-            $"- {Format.Bold("Owner")}: {app.Owner} ({app.Owner.Id})\n" +
+            $"- {Format.Bold("Owner")}: {owner} ({owner.Id})\n" +
             $"- {Format.Bold("Library")}: Discord.Net ({DiscordConfig.Version})\n" +
             $"- {Format.Bold("Uptime")}: {GetUptime()}\n" +
             $"- {Format.Bold("Runtime")}: {RuntimeInformation.FrameworkDescription} {RuntimeInformation.ProcessArchitecture} " +
@@ -59,6 +59,8 @@ $"""
 """);
         await RespondAsync("Here's a bit about me!", embed: builder.Build()).ConfigureAwait(false);
     }
+
+    private static string GetUptime() => (DateTime.Now - Process.GetCurrentProcess().StartTime).ToString(@"dd\.hh\:mm\:ss");
 
     private static string GetStartTimeRelative() => TimestampTag.FromDateTime(Process.GetCurrentProcess().StartTime.ToUniversalTime(), TimestampTagStyles.Relative).ToString();
     private static string GetHeapSize() => Math.Round(GC.GetTotalMemory(true) / (1024.0 * 1024.0), 2).ToString(CultureInfo.CurrentCulture);

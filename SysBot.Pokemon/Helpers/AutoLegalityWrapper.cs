@@ -108,7 +108,7 @@ public static class AutoLegalityWrapper
         return fallback;
     }
 
-    private static void RegisterIfNoneExist(SimpleTrainerInfo fallback, EntityContext context, GameVersion version)
+    private static void RegisterIfNoneExist(SimpleTrainerInfo fallback, byte generation, GameVersion version)
     {
         fallback = new SimpleTrainerInfo(version)
         {
@@ -116,8 +116,7 @@ public static class AutoLegalityWrapper
             TID16 = fallback.TID16,
             SID16 = fallback.SID16,
             OT = fallback.OT,
-            Context = context,
-            Generation = context.Generation,
+            Generation = generation,
         };
         var exist = TrainerSettings.GetSavedTrainerData((EntityContext)generation, version, fallback);
         if (exist is SimpleTrainerInfo) // not anything from files; this assumes ALM returns SimpleTrainerInfo for non-user-provided fake templates.

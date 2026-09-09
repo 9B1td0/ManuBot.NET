@@ -1,9 +1,10 @@
+using Discord;
+using LibUsbDotNet;
+using PKHeX.Core;
+using SysBot.Base;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Discord;
-using PKHeX.Core;
-using SysBot.Base;
 
 namespace SysBot.Pokemon.Discord;
 
@@ -20,17 +21,16 @@ public sealed record DiscordTradeNotifier<T>(T Data, PokeTradeTrainerInfo Info, 
 
     public async Task TradeInitialize(PokeRoutineExecutor<T> routine, PokeTradeDetail<T> info)
     {
-        if (Hub.Config.Discord.UseTradeEmbeds is TradeEmbedDisplay.TradeInitialize && info.Type is PokeTradeType.Specific)
-        {
-            var embed = new TradeEmbedBuilder<T>(Data, Hub, new QueueUser(Info.ID, Trader.Username));
-            Context.Channel.SendMessageAsync("", embed: embed.Build()).ConfigureAwait(false);
-        }
-
-        // Notify user in private messages
         var receive = Data.Species == 0 ? string.Empty : $" ({Data.Nickname})";
         var code = Format.Bold($"{Code:0000 0000}");
         var message = $"Initializing trade{receive}. Please be ready. Your code is {code}.";
 
+        if (typeof(T) == typeof(PB7))
+        {
+            var (attachment, embed) = PictoCodesEmbedBuilder.CreatePictoCodesEmbed(info.PictoCodes);
+            await Trader.Interaction.User.SendFileAsync(attachment, $"Initializing trade{receive}. Please be ready. Your code is ", false, embed.Build()).ConfigureAwait(false);
+            return;
+        }
         await SendNotification(message).ConfigureAwait(false);
     }
 
@@ -42,6 +42,12 @@ public sealed record DiscordTradeNotifier<T>(T Data, PokeTradeTrainerInfo Info, 
         var myName = Format.Bold(routine.InGameName);
         var message = $"I'm waiting for you{trainer}! Your code is {code}. My IGN is {myName}.";
 
+        if (typeof(T) == typeof(PB7))
+        {
+            var (attachment, embed) = PictoCodesEmbedBuilder.CreatePictoCodesEmbed(info.PictoCodes);
+            await Trader.Interaction.User.SendFileAsync(attachment, $"I'm waiting for you{trainer}! Your code is ", false, embed.Build()).ConfigureAwait(false);
+            return;
+        }
         await SendNotification(message).ConfigureAwait(false);
     }
 
@@ -64,6 +70,11 @@ public sealed record DiscordTradeNotifier<T>(T Data, PokeTradeTrainerInfo Info, 
             await Trader.SendFilePrivatelyAsync(result, "Here's what you traded me!").ConfigureAwait(false);
 
         LogUtil.LogInfo($"Total time since queueing: {info.Age:g}");
+        if (info.Age < TimeSpan.FromMinutes(15) && Hub.Config.Discord.UseTradeEmbeds is TradeEmbedDisplay.TradeComplete && info.Type is PokeTradeType.Specific)
+        {
+            var embed = new TradeEmbedBuilder<T>(Data, Hub, new QueueUser(Info.ID, Trader.Interaction.User.Username));
+            await Trader.Channel.SendMessageAsync("", embed: embed.Build()).ConfigureAwait(false);
+        }
     }
 
     public async Task SendNotification(PokeRoutineExecutor<T> routine, PokeTradeDetail<T> info, string message)

@@ -1,10 +1,11 @@
+using Discord;
+using Discord.Interactions;
+using LibUsbDotNet;
+using PKHeX.Core;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Discord;
-using Discord.Interactions;
-using PKHeX.Core;
 
 namespace SysBot.Pokemon.Discord;
 
@@ -63,15 +64,21 @@ public class BatchEditingModule : SlashModuleBase
             return;
         }
 
+        if (download.Data is not PKM pkm)
+        {
+            await FollowupAsync($"The attachment {download.SanitizedFileName} is not a valid PKM file.").ConfigureAwait(false);
+            return;
+        }
+
         var set = new StringInstructionSet(instructions);
-        var result = EntityBatchEditor.Instance.TryModify(pk, set.Filters, set.Instructions);
+        var result = EntityBatchEditor.Instance.TryModify(pkm, set.Filters, set.Instructions);
         if (result != ModifyResult.Modified)
         {
             await FollowupAsync($"Not modified: {result}").ConfigureAwait(false);
             return;
         }
 
-        await Context.SendFileAsync(pk, "Modified result attached:").ConfigureAwait(false);
+        await Context.SendFileAsync(pkm, "Modified result attached:").ConfigureAwait(false);
     }
 
     private static bool IsValidInstructionSet(ReadOnlySpan<char> split, out List<StringInstruction> invalid)

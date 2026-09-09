@@ -80,15 +80,21 @@ public static class AutoLegalityExtensionsDiscord
                 return;
             }
 
+            if (download.Data is not PKM pkm)
+            {
+                await context.Interaction.FollowupAsync($"The attachment {download.SanitizedFileName} is not a valid PKM file.").ConfigureAwait(false);
+                return;
+            }
+
             var pk = download.Data!;
             var fileName = download.SanitizedFileName;
-            if (new LegalityAnalysis(pk).Valid)
+            if (new LegalityAnalysis(pkm).Valid)
             {
                 await context.Interaction.FollowupAsync($"{fileName}: Already legal.", ephemeral: true).ConfigureAwait(false);
                 return;
             }
 
-            var legal = pk.LegalizePokemon();
+            var legal = pkm.LegalizePokemon();
             if (!new LegalityAnalysis(legal).Valid)
             {
                 await context.Interaction.FollowupAsync($"{fileName}: Unable to legalize.").ConfigureAwait(false);

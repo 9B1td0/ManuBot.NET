@@ -100,11 +100,11 @@ public class TwitchBot<T> where T : PKM, new()
         });
     }
 
-    private bool AddToTradeQueue(T pk, int code, OnWhisperReceivedArgs e, RequestSignificance sig, PokeRoutineType type, out string message)
+    private bool AddToTradeQueue(T pk, int code, PictoCode[]? code7b, OnWhisperReceivedArgs e, RequestSignificance sig, PokeRoutineType type, out string message)
     {
         if (typeof(T) == typeof(PB7) && code7b is null)
         {
-            msg = $"@{e.WhisperMessage.Username} invalid Trade Code! Please write 3 names of available Pokémons." +
+            message = $"@{e.WhisperMessage.Username} invalid Trade Code! Please write 3 names of available Pokémons." +
                 $"Valid entries: Pikachu, Eevee, Bulbasaur, Charmander, Squirtle, Pidgey, Caterpie, Rattata, Jigglypuff, Diglett.";
             return false;
         }
@@ -120,6 +120,7 @@ public class TwitchBot<T> where T : PKM, new()
         {
             IsFavored = sig.IsFavored,
             Code = code,
+            Code7b = code7b,
             TradeData = pk,
             Trainer = trainer,
             Notifier = notifier,
@@ -227,14 +228,14 @@ public class TwitchBot<T> where T : PKM, new()
         {
             // User Usable Commands
             case "donate":
-                return !string.IsNullOrWhiteSpace(Settings.DonationLink) ?
-                    $"Here's the donation link! Thank you for your support :3 {Settings.DonationLink}" : string.Empty;
+                return !string.IsNullOrWhiteSpace(_settings.DonationLink) ?
+                    $"Here's the donation link! Thank you for your support :3 {_settings.DonationLink}" : string.Empty;
             case "discord":
-                return !string.IsNullOrWhiteSpace(Settings.DonationLink) ?
-                    $"Here's the Discord Server Link, have a nice stay :3 {Settings.DiscordLink}" : string.Empty;
+                return !string.IsNullOrWhiteSpace(_settings.DonationLink) ?
+                    $"Here's the Discord Server Link, have a nice stay :3 {_settings.DiscordLink}" : string.Empty;
             case "tutorial":
             case "help":
-                return $"{Settings.TutorialText} {Settings.TutorialLink}";
+                return $"{_settings.TutorialText} {_settings.TutorialLink}";
             case "trade":
                 var _ = TwitchCommandsHelper<T>.AddToWaitingList(args, m.DisplayName, m.Username, ulong.Parse(m.UserId), IsSubscriber(), out var message);
                 return message;
@@ -303,13 +304,37 @@ public class TwitchBot<T> where T : PKM, new()
             var code7b = typeof(T) == typeof(PB7) ? ParsePokemonNames(msg) : null;
             int code = typeof(T) != typeof(PB7) ? Util.ToInt32(msg) : 0;
             var sig = GetUserSignificance(user);
-            _ = AddToTradeQueue(user.Entity, code, e, sig, PokeRoutineType.LinkTrade, out var message);
+            _ = AddToTradeQueue(user.Entity, code, code7b, e, sig, PokeRoutineType.LinkTrade, out var message);
             await _client.SendMessageAsync(_channel, message).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
             LogUtil.LogSafe(ex);
             LogUtil.LogError($"{ex.Message}");
+        }
+    }
+
+    private static PictoCode[]? ParsePokemonNames(string message)
+    {
+        var parsedPokemon = new List<PictoCode>();
+        var separators = new char[] { ',', '.', '-', ' ' };
+        var words = message.Split(separators, StringSplitOptions.RemoveEmptyEntries);
+        var pokemonList = Enum.GetValues<PictoCode>();
+
+        try
+        {
+            foreach (var word in words)
+            {
+                parsedPokemon.Add(pokemonList.First(p => string.Equals(p.ToString(), word, StringComparison.OrdinalIgnoreCase)));
+                if (parsedPokemon.Count >= 3)
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            LogUtil.LogSafe(ex, nameof(TwitchBot<T>));
+            LogUtil.LogError($"{ex.Message}", nameof(TwitchBot<T>));
+            return null;
         }
 
         if (parsedPokemon.Count == 3)

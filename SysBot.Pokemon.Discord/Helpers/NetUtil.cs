@@ -1,6 +1,7 @@
 using System.Net.Http;
 using System.Threading.Tasks;
 using Discord;
+using System.IO;
 using PKHeX.Core;
 
 namespace SysBot.Pokemon.Discord;
@@ -14,7 +15,7 @@ public static class NetUtil
         return await Client.GetByteArrayAsync(url).ConfigureAwait(false);
     }
 
-    public static async Task<Download<PKM>> DownloadEntityAsync(this IAttachment att)
+    public static async Task<Download<ISpeciesForm>> DownloadEntityAsync(this IAttachment att)
     {
         var result = new Download<ISpeciesForm> { SanitizedFileName = Format.Sanitize(att.Filename) };
 

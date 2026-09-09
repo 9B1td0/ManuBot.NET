@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -21,7 +22,6 @@ public sealed partial class Main : Form
         InitializeComponent();
 
         Config = config;
-        PokeTradeBotSWSH.SeedChecker = new Z3SeedSearchHandler<PK8>();
         RunningEnvironment = GetRunner(Config);
 
         foreach (var bot in Config.Bots)
@@ -45,10 +45,11 @@ public sealed partial class Main : Form
         Text = $"{Text} ({Config.Hub.Mode})";
         Task.Run(BotMonitor);
 
-        InitUtil.InitializeStubs(Config.Hub.Mode);
+        var trainer = Config.Hub.Legality;
+        InitUtil.InitializeStubs(Config.Hub.Mode, trainer.GenerateOT, trainer.GenerateLanguage);
     }
 
-    private static IPokeBotRunner GetRunner(ProgramConfig cfg) => cfg.Hub.Mode switch
+    private IPokeBotRunner GetRunner(ProgramConfig cfg) => cfg.Hub.Mode switch
     {
         ProgramMode.LGPE => new PokeBotRunnerImpl<PB7>(cfg.Hub, new BotFactory7LGPE()) { Owner = this },
         ProgramMode.SWSH => new PokeBotRunnerImpl<PK8>(cfg.Hub, new BotFactory8SWSH()) { Owner = this },
@@ -195,7 +196,8 @@ public sealed partial class Main : Form
         Tab_Logs.Select();
 
         if (Bots.Count == 0)
-            WinFormsUtil.Alert("No bots configured, but all supporting services have been issued the reboot command.");
+            this.Alert("No bots configured, but all supporting services have been issued the reboot command.");
+
     }
 
     private void B_New_Click(object sender, EventArgs e)
@@ -245,10 +247,9 @@ public sealed partial class Main : Form
 
     private void AddBotControl(PokeBotState cfg)
     {
-        var row = new BotController { Width = FLP_Bots.Width, Anchor = AnchorStyles.Left | AnchorStyles.Right };
+        var row = new BotController { Width = GetBotRowWidth(), Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top };
         row.Initialize(RunningEnvironment, cfg);
         FLP_Bots.Controls.Add(row);
-        FLP_Bots.SetFlowBreak(row, true);
         row.AddClickHandler(() =>
         {
             var details = cfg.Connection;
@@ -263,7 +264,9 @@ public sealed partial class Main : Form
             Bots.Remove(row.State);
             RunningEnvironment.Remove(row.State, !RunningEnvironment.Config.SkipConsoleBotCreation);
             FLP_Bots.Controls.Remove(row);
+            LayoutBotControls();
         };
+        LayoutBotControls();
     }
 
     private PokeBotState CreateNewBotConfig()
@@ -281,8 +284,22 @@ public sealed partial class Main : Form
 
     private void FLP_Bots_Resize(object sender, EventArgs e)
     {
-        foreach (var c in FLP_Bots.Controls.OfType<BotController>())
-            c.Width = FLP_Bots.Width;
+        LayoutBotControls();
+    }
+
+    private int GetBotRowWidth() => Math.Max(0, FLP_Bots.ClientSize.Width - SystemInformation.VerticalScrollBarWidth);
+
+    private void LayoutBotControls()
+    {
+        var width = GetBotRowWidth();
+        var top = 0;
+        foreach (var control in FLP_Bots.Controls.OfType<BotController>())
+        {
+            control.Location = new Point(0, top);
+            control.Width = width;
+            top += control.Height;
+        }
+        FLP_Bots.AutoScrollMinSize = new Size(0, top);
     }
 
     private void CB_Protocol_SelectedIndexChanged(object sender, EventArgs e)

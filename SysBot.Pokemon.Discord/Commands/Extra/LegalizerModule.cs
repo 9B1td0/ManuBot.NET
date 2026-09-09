@@ -29,8 +29,14 @@ public class LegalizerModule<T> : SlashModuleBase where T : PKM, new()
             return;
         }
 
+        if (download.Data is not PKM pkm)
+        {
+            await FollowupAsync($"The attachment {download.SanitizedFileName} is not a valid PKM file.").ConfigureAwait(false);
+            return;
+        }
+
         var blank = EntityBlank.GetBlank(type).GetType();
-        var converted = EntityConverter.ConvertToType(pk, blank, out var result);
+        var converted = EntityConverter.ConvertToType(pkm, blank, out var result);
         if (converted is null)
             await FollowupAsync($"Failed to convert your attachment to {type}: {result}").ConfigureAwait(false);
         else

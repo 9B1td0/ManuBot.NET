@@ -1,8 +1,11 @@
-using System.IO;
-using System.Threading.Tasks;
 using Discord;
 using Discord.Net;
+using LibUsbDotNet;
 using PKHeX.Core;
+using System.Diagnostics;
+using System.IO;
+using System.Threading.Tasks;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace SysBot.Pokemon.Discord;
 
@@ -29,6 +32,13 @@ public static class QueueHelper<T> where T : PKM, new()
 
             // Keep a public log of them joining the queue.
             await context.Channel.SendMessageAsync($"{context.User.Mention} - {check.Message}").ConfigureAwait(false);
+
+            var hub = SysCord<T>.Runner.Hub.Queues.Info.Hub;
+            if (hub.Config.Discord.UseTradeEmbeds is TradeEmbedDisplay.TradeInitialize && type is PokeTradeType.Specific)
+            {
+                var embed = new TradeEmbedBuilder<T>(pk, hub, new QueueUser(context.User.Id, context.User.Username));
+                await context.Channel.SendMessageAsync("", embed: embed.Build()).ConfigureAwait(false);
+            }
 
             // Update the ephemeral command message to backlink to the DM we just sent the user.
             await context.Interaction.FollowupAsync($"Success! Please check your direct messages: {message.GetJumpUrl()}").ConfigureAwait(false);
@@ -67,18 +77,28 @@ public static class QueueHelper<T> where T : PKM, new()
     private static Task<IUserMessage> GetPrivateMessageTradeJoin(IInteractionContext context, T pk, QueueJoinResult check, string message,
         out MemoryStream? sprite)
     {
-        var builder = new EntityEmbedBuilder(pk);
-        builder
-            .AddReceiving()
-            .AddTradeCode(check.Join.Trade.Code)
-            .AddQueuePosition(check.Position);
-
         var user = context.Interaction.User;
-        if (builder.TryAddSpriteThumbnail(out sprite, out var thumb))
-            return user.SendFileAsync(thumb.Value, text: message, embed: builder.Build());
+        if (typeof(T) == typeof(PB7))
+        {
+            var codes = check.Join.Trade.PictoCodes;
+            var (attachment, embed) = PictoCodesEmbedBuilder.CreatePictoCodesEmbed(codes);
+            sprite = ReusableActions.GetSprite?.Invoke(pk);
+            return user.SendFileAsync(attachment, $"{message}\nYour trade code will be ", false, embed.Build());
+        }
+        else
+        {
+            var builder = new EntityEmbedBuilder(pk);
+            builder
+                .AddReceiving()
+                .AddTradeCode(check.Join.Trade.Code)
+                .AddQueuePosition(check.Position);
 
-        // No sprite, just return a regular message.
-        return user.SendMessageAsync(text: message, embed: builder.Build());
+            if (builder.TryAddSpriteThumbnail(out sprite, out var thumb))
+                return user.SendFileAsync(thumb.Value, text: message, embed: builder.Build());
+
+            // No sprite, just return a regular message.
+            return user.SendMessageAsync(text: message, embed: builder.Build());
+        }
     }
 
     /// <summary>

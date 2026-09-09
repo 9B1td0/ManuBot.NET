@@ -25,7 +25,13 @@ public class LegalityCheckModule : SlashModuleBase
             return;
         }
 
-        var la = new LegalityAnalysis(download.Data!);
+        if (download.Data is not PKM pkm)
+        {
+            await FollowupAsync($"The attachment {download.SanitizedFileName} is not a valid PKM file.").ConfigureAwait(false);
+            return;
+        }
+
+        var la = new LegalityAnalysis(pkm);
         var builder = new EmbedBuilder { Color = la.Valid ? Color.Green : Color.Red, Description = $"Legality Report for {download.SanitizedFileName}:" };
         builder.AddField(la.Valid ? "Valid" : "Invalid", la.Report(verbose));
 

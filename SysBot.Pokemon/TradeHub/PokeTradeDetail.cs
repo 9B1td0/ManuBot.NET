@@ -5,7 +5,7 @@ using PKHeX.Core;
 
 namespace SysBot.Pokemon;
 
-public sealed record PokeTradeDetail<TPoke> : IFavoredEntry, IReadyStatus where TPoke : PKM, new()
+public sealed record PokeTradeDetail<TPoke>(PictoCode[]? Code7b = null) : IFavoredEntry, IReadyStatus where TPoke : PKM, new()
 {
     // ReSharper disable once StaticMemberInGenericType
     /// <summary> Global variable indicating the amount of trades created. </summary>

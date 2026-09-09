@@ -321,7 +321,7 @@ public class PokeTradeBotLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : PokeR
         await Task.Delay(1_000 + Hub.Config.Timings.ExtraTimeOpenBox, token).ConfigureAwait(false);
 
         var tradePartner = await GetTradePartnerInfo(token).ConfigureAwait(false);
-        RecordUtil<PokeTradeBotLZA>.Record($"Initiating\t{tradePartner.NID:X16}\t{tradePartner.OT}\t{poke.Trainer.TrainerName}\t{poke.Trainer.ID}\t{poke.ID}\t{toSend.EncryptionConstant:X8}");
+        RecordUtil<PokeTradeBotLZA>.Record($"Initiating\t{tradePartner.NID:X16}\t{tradePartner.OT}\t{poke.Trainer.TrainerName}\t{poke.Trainer.ID}\t{poke.Id}\t{toSend.EncryptionConstant:X8}");
         Log($"Found Link Trade partner: {tradePartner.OT}-{tradePartner.TID7:000000} (ID: {tradePartner.NID})");
 
         var partnerCheck = await CheckPartnerReputation(this, poke, tradePartner.NID, tradePartner.OT, AbuseSettings, token).ConfigureAwait(false);
@@ -337,7 +337,7 @@ public class PokeTradeBotLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : PokeR
             await SetBoxPokemonAbsolute(BoxStartOffset, toSend, token, sav).ConfigureAwait(false);
         }
 
-        poke.SendNotification(this, $"Found Link Trade partner: {tradePartner.OT}. Waiting for a Pokémon...");
+        await poke.SendNotification(this, $"Found Link Trade partner: {tradePartner.OT}. Waiting for a Pokémon...").ConfigureAwait(false);
 
         if (poke.Type == PokeTradeType.Dump)
         {

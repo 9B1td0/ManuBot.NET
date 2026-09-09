@@ -170,16 +170,27 @@ public partial class TradeModule<T> : SlashModuleBase where T : PKM, new() // pa
         }
     }
 
-    private static T? GetRequest(Download<PKM> dl)
+    private static T? GetRequest(Download<ISpeciesForm> dl)
     {
         if (!dl.Success)
             return null;
+
         return dl.Data switch
         {
-            null => null,
-            T pk => pk,
-            _ => EntityConverter.ConvertToType(dl.Data, typeof(T), out _) as T,
+            T entity => entity,
+            PKM pkm => ConvertToFormat(pkm),
+            MysteryGift mg => ConvertMysteryGiftToPKM(mg),
+            _ => null,
         };
+
+        static T? ConvertMysteryGiftToPKM(IEncounterable enc)
+        {
+            var trainer = AutoLegalityWrapper.GetTrainerInfo<T>();
+            var pkm = enc.ConvertToPKM(trainer);
+            return ConvertToFormat(pkm);
+        }
+
+        static T? ConvertToFormat(PKM pkm) => EntityConverter.ConvertToType(pkm, typeof(T), out _) as T;
     }
 
     private static string GetInvalidSetMessage(ShowdownSet set)
