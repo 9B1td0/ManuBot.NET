@@ -1,14 +1,12 @@
-using PKHeX.Core;
-using SysBot.Base;
-using SysBot.Pokemon.Z3;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using PKHeX.Core;
+using SysBot.Base;
 
 namespace SysBot.Pokemon.WinForms;
 
@@ -52,12 +50,12 @@ public sealed partial class Main : Form
 
     private static IPokeBotRunner GetRunner(ProgramConfig cfg) => cfg.Hub.Mode switch
     {
-        ProgramMode.LGPE => new PokeBotRunnerImpl<PB7>(cfg.Hub, new BotFactory7LGPE()),
-        ProgramMode.SWSH => new PokeBotRunnerImpl<PK8>(cfg.Hub, new BotFactory8SWSH()),
-        ProgramMode.BDSP => new PokeBotRunnerImpl<PB8>(cfg.Hub, new BotFactory8BS()),
-        ProgramMode.LA   => new PokeBotRunnerImpl<PA8>(cfg.Hub, new BotFactory8LA()),
-        ProgramMode.SV   => new PokeBotRunnerImpl<PK9>(cfg.Hub, new BotFactory9SV()),
-        ProgramMode.LZA  => new PokeBotRunnerImpl<PA9>(cfg.Hub, new BotFactory9LZA()),
+        ProgramMode.LGPE => new PokeBotRunnerImpl<PB7>(cfg.Hub, new BotFactory7LGPE()) { Owner = this },
+        ProgramMode.SWSH => new PokeBotRunnerImpl<PK8>(cfg.Hub, new BotFactory8SWSH()) { Owner = this },
+        ProgramMode.BDSP => new PokeBotRunnerImpl<PB8>(cfg.Hub, new BotFactory8BS()) { Owner = this },
+        ProgramMode.LA   => new PokeBotRunnerImpl<PA8>(cfg.Hub, new BotFactory8LA()) { Owner = this },
+        ProgramMode.SV   => new PokeBotRunnerImpl<PK9>(cfg.Hub, new BotFactory9SV()) { Owner = this },
+        ProgramMode.LZA  => new PokeBotRunnerImpl<PA9>(cfg.Hub, new BotFactory9LZA()) { Owner = this },
         _ => throw new IndexOutOfRangeException("Unsupported mode."),
     };
 
@@ -82,7 +80,6 @@ public sealed partial class Main : Form
 
     private void LoadControls()
     {
-        MinimumSize = Size;
         PG_Hub.SelectedObject = RunningEnvironment.Config;
 
         var routines = Enum.GetValues<PokeRoutineType>().Where(z => RunningEnvironment.SupportsRoutine(z));
@@ -139,13 +136,13 @@ public sealed partial class Main : Form
     {
         SaveCurrentConfig();
 
-        LogUtil.LogInfo("Starting all bots...", "Form");
+        LogUtil.LogInfo("Starting all bots...");
         RunningEnvironment.InitializeStart();
         SendAll(BotControlCommand.Start);
         Tab_Logs.Select();
 
         if (Bots.Count == 0)
-            WinFormsUtil.Alert("No bots configured, but all supporting services have been started.");
+            this.Alert("No bots configured, but all supporting services have been started.");
     }
 
     private void SendAll(BotControlCommand cmd)
@@ -161,7 +158,7 @@ public sealed partial class Main : Form
         var env = RunningEnvironment;
         if (!env.IsRunning && (ModifierKeys & Keys.Alt) == 0)
         {
-            WinFormsUtil.Alert("Nothing is currently running.");
+            this.Alert("Nothing is currently running.");
             return;
         }
 
@@ -171,12 +168,12 @@ public sealed partial class Main : Form
         {
             if (env.IsRunning)
             {
-                WinFormsUtil.Alert("Commanding all bots to Idle.", "Press Stop (without a modifier key) to hard-stop and unlock control, or press Stop with the modifier key again to resume.");
+                this.Alert("Commanding all bots to Idle.", "Press Stop (without a modifier key) to hard-stop and unlock control, or press Stop with the modifier key again to resume.");
                 cmd = BotControlCommand.Idle;
             }
             else
             {
-                WinFormsUtil.Alert("Commanding all bots to resume their original task.", "Press Stop (without a modifier key) to hard-stop and unlock control.");
+                this.Alert("Commanding all bots to resume their original task.", "Press Stop (without a modifier key) to hard-stop and unlock control.");
                 cmd = BotControlCommand.Resume;
             }
         }
@@ -206,7 +203,7 @@ public sealed partial class Main : Form
         var cfg = CreateNewBotConfig();
         if (!AddBot(cfg))
         {
-            WinFormsUtil.Alert("Unable to add bot; ensure details are valid and not duplicate with an already existing bot.");
+            this.Alert("Unable to add bot; ensure details are valid and not duplicate with an already existing bot.");
             return;
         }
         System.Media.SystemSounds.Asterisk.Play();
@@ -237,7 +234,7 @@ public sealed partial class Main : Form
         }
         catch (ArgumentException ex)
         {
-            WinFormsUtil.Error(ex.Message);
+            this.Error(ex.Message);
             return false;
         }
 
@@ -248,18 +245,18 @@ public sealed partial class Main : Form
 
     private void AddBotControl(PokeBotState cfg)
     {
-        var row = new BotController { Width = FLP_Bots.Width };
+        var row = new BotController { Width = FLP_Bots.Width, Anchor = AnchorStyles.Left | AnchorStyles.Right };
         row.Initialize(RunningEnvironment, cfg);
         FLP_Bots.Controls.Add(row);
         FLP_Bots.SetFlowBreak(row, true);
-        row.Click += (s, e) =>
+        row.AddClickHandler(() =>
         {
             var details = cfg.Connection;
             TB_IP.Text = details.IP;
             NUD_Port.Text = details.Port.ToString();
             CB_Protocol.SelectedIndex = (int)details.Protocol;
             CB_Routine.SelectedValue = (int)cfg.InitialRoutine;
-        };
+        });
 
         row.Remove += (s, e) =>
         {
